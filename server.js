@@ -1,4 +1,5 @@
 import express from "express";
+import dotenv from "dotenv/config";
 import { connectToDatabase } from "./database.js";
 import userRoutes from "./routes/userRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
@@ -22,7 +23,7 @@ app.use(express.json());
 
 // Add CORS headers
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+  res.setHeader("Access-Control-Allow-Origin", process.env.FRONTURL);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   next();
@@ -43,9 +44,6 @@ app.all("*", (req, res, next) => {
 app.use(globalError);
 app.use(cors());
 
-
-
-
 const server = app.listen(port, () => {
   if (isDev) {
     console.log(`Server listening on ${port}: development`);
@@ -53,10 +51,6 @@ const server = app.listen(port, () => {
     console.log("The server is on! production!");
   }
 });
-
-
-
-
 
 process.on("unhandledRejection", (err) => {
   console.log(err.name, err.message);
