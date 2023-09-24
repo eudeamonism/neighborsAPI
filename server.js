@@ -1,12 +1,10 @@
 import express from "express";
-import dotenv from "dotenv/config";
 import { connectToDatabase } from "./database.js";
 import userRoutes from "./routes/userRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
 import cors from "cors";
 import AppError from "./appError.js";
 import globalError from "./errorController.js";
-import path from 'path';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -56,9 +54,9 @@ const server = app.listen(port, () => {
   }
 });
 
-const __dirname = path.resolve();
 
-console.log(__dirname);
+
+
 
 process.on("unhandledRejection", (err) => {
   console.log(err.name, err.message);
