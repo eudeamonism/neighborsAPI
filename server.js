@@ -8,7 +8,7 @@ import AppError from "./appError.js";
 import globalError from "./errorController.js";
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 const isDev = process.env.NODE_ENV === "development";
 const isProd = process.env.NODE_ENV === "production";
 connectToDatabase();
@@ -26,6 +26,7 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", process.env.FRONTURL);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
   next();
 });
 

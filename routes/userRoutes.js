@@ -13,6 +13,9 @@ const userRoutes = express.Router();
 const genToken = (id) => {
   return jwt.sign({ id }, process.env.TOKEN_SECRET, { expiresIn: "15m" });
 };
+const refToken = (id) => {
+  return jwt.sign({ id }, process.env.TOKEN_SECRET, { expiresIn: "24h" });
+};
 
 const userStuff = process.env.USEREMAIL;
 const passStuff = process.env.STMPPASS;
@@ -49,6 +52,64 @@ async function main2(useremail) {
   });
   console.log("Message sent: %s", info.messageId);
 }
+
+const decryptGmailToken = asyncHandler(async (req, res) => {
+  const body = req.body.headers;
+  const { clientId, credential } = body;
+
+  const decodedToken = jwt.decode(credential);
+
+  if (
+    decodedToken.aud !== process.env.GMAIL_CLIENT_ID &&
+    decodedToken.iss !== "https://accounts.google.com"
+  ) {
+    return res.status(403);
+  }
+
+  try {
+    const email = decodedToken.email;
+
+    const user = await User.findOne({ email });
+
+    if (user === null) {
+      return res.status(404).json({ message: "Account not found!" });
+    }
+
+    const id = user._id.toString();
+
+    const token = genToken(id);
+    const refresh = refToken(id);
+
+    return res.status(200).json({ token, refresh });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+const sendProfile = asyncHandler(async (req, res) => {
+  console.log("userRoutes.sendProfile");
+  try {
+    const token = req.params.token;
+    const refresh = req.params.refresh;
+
+    if (token.length > 14) {
+      const response = jwt.verify(token, process.env.TOKEN_SECRET);
+
+      const id = response.id;
+      console.log(id);
+      const user = await User.findById(id);
+      return res.status(201).json(user);
+    }
+
+    if (refresh.length > 14 && token.length < 14) {
+      console.log("Refresh is present!");
+    }
+  } catch (error) {
+    console.log(error);
+    console.log("userRoutes.sendProfile catch error");
+    return res.status(401).json("expired");
+  }
+});
 
 const forgotPassword = asyncHandler(async (req, res) => {
   try {
@@ -107,7 +168,8 @@ const registerUser = asyncHandler(async (req, res) => {
 
     if (user) {
       res.status(201).json({
-        token: genToken(user._id, user.isAdmin, user.isGuide),
+        token: genToken(user._id.toString()),
+        refresh: refToken(user._id.toString()),
       });
     }
   } catch (error) {
@@ -123,13 +185,15 @@ const loginUser = asyncHandler(async (req, res) => {
   const complaint = await Complaint.find({ userId: user._id });
 
   if (await bcrypt.compare(password, user.password)) {
-    const token = genToken(user._id, user.isAdmin, user.isGuide);
+    const token = genToken(user._id.toString());
+    const refresh = refToken(user._id.toString());
 
     user.numberOfComplaints = complaint.length;
     user.save();
 
     res.json({
-      token,
+      refresh: refresh,
+      token: token,
     });
   } else {
     res.json(401).send("Invalid Email or Password");
@@ -214,7 +278,9 @@ const updatePassword = asyncHandler(async (req, res) => {
 });
 
 //Routes
+userRoutes.route("/gmailverify").post(decryptGmailToken);
 userRoutes.route("/login").post(loginUser);
+userRoutes.route("/profile/:token/:refresh").get(sendProfile);
 userRoutes.route("/forgotPassword/:email").get(forgotPassword);
 userRoutes.route("/register").post(registerUser);
 userRoutes.route("/decrementComplaint/:id").post(decrementComplaint);
