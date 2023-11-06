@@ -1,11 +1,12 @@
 import express from "express";
 import { v2 as cloudinary } from "cloudinary";
 
+import jwt from "jsonwebtoken";
+
 import User from "../models/User.js";
 import Complaint from "../models/Complaint.js";
 import asyncHandler from "express-async-handler";
 import AppError from "../appError.js";
-import { admin, protectRoute } from "../Middleware/AuthMiddleware.js";
 
 const complaintRoutes = express.Router();
 
@@ -19,22 +20,38 @@ cloudinary.config({
 const createComplaint = asyncHandler(async (req, res) => {
   try {
     const {
-      userId,
-      displayName,
       title,
       occurence,
-      time,
+      street,
+      cross,
       complaintType,
       description,
       imageUrl,
-      authoritiesNotified,
+      authorities,
       resolved,
-      crossStreet1,
-      crossStreet2,
+      time,
+      token,
+      refresh,
     } = req.body;
 
+    const decodeToken = jwt.decode(token);
+
+    const id = decodeToken.id;
+
+    const user = await User.findById(id);
+
+    const displayName = user.displayName;
+    user.numberOfComplaints++;
+
+    if (user.numberOfComplaints > 50) {
+      user.isGuide === true;
+    } else {
+      user.isGuide === false;
+    }
+    user.save();
+
     const complaint = new Complaint({
-      userId,
+      userId: id,
       displayName,
       title,
       occurence,
@@ -42,10 +59,10 @@ const createComplaint = asyncHandler(async (req, res) => {
       complaintType,
       description,
       imageUrl,
-      authoritiesNotified,
+      authoritiesNotified: authorities,
       resolved,
-      crossStreet1,
-      crossStreet2,
+      crossStreet1: street,
+      crossStreet2: cross,
     });
 
     await complaint.save();
@@ -146,8 +163,67 @@ const destoryAsset = asyncHandler(async (req, res) => {
   }
 });
 
+const getMyComplaintsFromDB = asyncHandler(async (req, res) => {
+  const authorization = req.headers.authorization;
+
+  const headers = authorization.split(",");
+
+  const tokenSplit = headers[0].split(" ");
+
+  const token = tokenSplit[1];
+
+  const refreshSplit = headers[1].split(" ");
+
+  const refresh = refreshSplit[2];
+
+  try {
+    const tokenVerify = jwt.verify(token, process.env.TOKEN_SECRET, function (error, result) {
+      if (error) {
+        return "expired";
+      } else {
+        return result;
+      }
+    });
+
+    const refreshVerify = jwt.verify(refresh, process.env.TOKEN_SECRET, function (error, result) {
+      if (error) {
+        return "expired";
+      } else {
+        return result;
+      }
+    });
+
+    //NEED ALL CASE CODE COMPLETED -- ONLY COMPLETED, PERHAPS, FOR REFRESH TOKEN BUT NOT TOKEN CASE
+
+    if (tokenVerify !== "expired") {
+      const complaints = await Complaint.find({
+        userId: tokenVerify.id,
+      })
+
+        .sort({ createdAt: 1 })
+        .exec();
+
+      return res.status(201).json(complaints);
+    } else if (refreshVerify !== "expired") {
+      const complaints = await Complaint.find({
+        userId: refreshVerify.id,
+      })
+
+        .sort({ createdAt: 1 })
+        .exec();
+
+      return res.status(201).json(complaints);
+    } else {
+      return res.status(404).json("Not Found!");
+    }
+  } catch (error) {
+    console.log("My Complaints Error " + error);
+  }
+});
+
 //Routes
-complaintRoutes.route("/createComplaint").post(protectRoute, createComplaint);
+complaintRoutes.route("/myComplaints").get(getMyComplaintsFromDB);
+complaintRoutes.route("/createComplaint").post(createComplaint);
 complaintRoutes.route("/getComplaints").get(getComplaints);
 
 complaintRoutes.route("/paginated").get(getPaginatedComplaints);

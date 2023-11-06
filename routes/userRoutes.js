@@ -10,6 +10,23 @@ import otpGenerator from "otp-generator";
 
 const userRoutes = express.Router();
 
+const expToNorm = (tokenExpiry) => {
+  const date = new Date(tokenExpiry * 1000);
+
+  const options = {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  };
+  const formattedDate = date.toLocaleDateString("en-US", options);
+
+  return formattedDate;
+};
+
 const genToken = (id) => {
   return jwt.sign({ id }, process.env.TOKEN_SECRET, { expiresIn: "15m" });
 };
@@ -82,31 +99,47 @@ const decryptGmailToken = asyncHandler(async (req, res) => {
 
     return res.status(200).json({ token, refresh });
   } catch (error) {
-    console.log(error);
+    console.log("GMToken " + error);
   }
 });
 
 const sendProfile = asyncHandler(async (req, res) => {
-  console.log("userRoutes.sendProfile");
   try {
     const token = req.params.token;
     const refresh = req.params.refresh;
 
-    if (token.length > 14) {
-      const response = jwt.verify(token, process.env.TOKEN_SECRET);
+    const parsedToken = jwt.verify(token, process.env.TOKEN_SECRET, function (err, res) {
+      if (err) {
+        console.log("Error in callback of jwt:  token " + err);
+      } else {
+        return res;
+      }
+    });
 
-      const id = response.id;
-      console.log(id);
-      const user = await User.findById(id);
-      return res.status(201).json(user);
-    }
+    
 
-    if (refresh.length > 14 && token.length < 14) {
-      console.log("Refresh is present!");
+    const parsedRefresh = jwt.verify(refresh, process.env.TOKEN_SECRET, function (err, res) {
+      if (err) {
+        console.log("Error in callback of jwt: refresh " + err);
+      } else {
+        return res;
+      }
+    });
+
+    if (parsedToken !== undefined) {
+      const user = await User.findById(parsedToken.id);
+
+      return res.status(401).json(user);
+    } else if (parsedRefresh !== undefined) {
+      const user = await User.findById(parsedRefresh.id);
+
+      return res.status(401).json(user);
+    } else {
+      return console.log("Both tokens are expired! Ends here!");
     }
   } catch (error) {
-    console.log(error);
-    console.log("userRoutes.sendProfile catch error");
+    console.log("SEND Profile " + error);
+
     return res.status(401).json("expired");
   }
 });
@@ -144,7 +177,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
       res.status(201).json({ stat: "notfound" });
     }
   } catch (error) {
-    console.log(error);
+    console.log("forgot password " + error);
   }
 });
 
@@ -173,7 +206,7 @@ const registerUser = asyncHandler(async (req, res) => {
       });
     }
   } catch (error) {
-    console.log(error);
+    console.log("registerUser " + error);
   }
 });
 
@@ -251,7 +284,7 @@ const matching = asyncHandler(async (req, res) => {
       return res.status(201).json("error");
     }
   } catch (error) {
-    console.log(error);
+    console.log("matching " + error);
   }
 });
 
@@ -269,10 +302,10 @@ const updatePassword = asyncHandler(async (req, res) => {
     user.password = password;
     const updatedUser = await user.save();
 
-    console.log(updatedUser);
+    console.log("updatedUser pl " + updatedUser);
     return res.status(201).json("login");
   } catch (error) {
-    console.log(error);
+    console.log("update user error " + error);
     return res.status(201).json("error");
   }
 });
