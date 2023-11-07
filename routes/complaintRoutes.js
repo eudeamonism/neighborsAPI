@@ -85,7 +85,14 @@ const getComplaints = asyncHandler(async (req, res) => {
 
 const testingStuff = asyncHandler(async (req, res) => {
   try {
-    const complaints = await Complaint.find({ userId: "64bd7065a28c926c4f5280c5" });
+    const filter = {
+      resolved: false,
+    };
+    const sort = {
+      createdAt: -1,
+    };
+
+    const complaints = await Complaint.find(filter).sort({ createdAt: -1 });
     console.log(complaints.length);
 
     res.status(201).json(complaints);
@@ -98,6 +105,16 @@ const testingStuff = asyncHandler(async (req, res) => {
 
 const removeComplaint = asyncHandler(async (req, res) => {
   try {
+    const complaintInformation = await Complaint.findById(req.params.id);
+
+    const userId = complaintInformation.userId;
+
+    const user = await User.findById(userId);
+
+    user.numberOfComplaints--;
+
+    user.save();
+
     const complaint = await Complaint.findByIdAndDelete(req.params.id);
 
     res.json(complaint);
