@@ -92,7 +92,7 @@ const testingStuff = asyncHandler(async (req, res) => {
       createdAt: -1,
     };
 
-    const complaints = await Complaint.find(filter).sort({ createdAt: -1 });
+    const complaints = await Complaint.find(filter).sort({ createdAt: -1 }).skip(3).limit(1);
     console.log(complaints.length);
 
     res.status(201).json(complaints);
@@ -132,6 +132,35 @@ const getComplaint = asyncHandler(async (req, res) => {
     res.status(201).json(complaint);
   } catch (error) {
     throw new AppError(`Something went wrong getting complaint. Error: ${error}`, 404);
+  }
+});
+
+const customGetComplaint = asyncHandler(async (req, res) => {
+  try {
+    const choice = req.params.choice;
+
+    if (choice === "desc") {
+      const complaints = await Complaint.find().sort({ createdAt: -1 }).limit(4);
+      return res.status(200).json({ length: complaints.length, complaints: complaints });
+    }
+    if (choice === "asc") {
+      const complaints = await Complaint.find().sort({ createdAt: 1 }).limit(4);
+      return res.status(200).json({ length: complaints.length, complaints: complaints });
+    }
+    if (choice === "resY") {
+      return res.status(200).json({ message: "resY OK" });
+    }
+    if (choice === "resN") {
+      return res.status(200).json({ message: "resN OK" });
+    }
+
+    const complaints = await Complaint.find().sort({ createdAt: -1 }).skip(3).limit(1);
+
+    res.status(201).json(complaints);
+  } catch (error) {
+    throw new AppError(
+      `Something went wrong retrieving most recent complaints. ERROR => ${error} Error Message => ${error.message}`
+    );
   }
 });
 
@@ -239,6 +268,7 @@ const getMyComplaintsFromDB = asyncHandler(async (req, res) => {
 });
 
 //Routes
+complaintRoutes.route("/filter/:choice").get(customGetComplaint);
 complaintRoutes.route("/myComplaints").get(getMyComplaintsFromDB);
 complaintRoutes.route("/createComplaint").post(createComplaint);
 complaintRoutes.route("/getComplaints").get(getComplaints);

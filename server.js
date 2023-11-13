@@ -3,6 +3,7 @@ import dotenv from "dotenv/config";
 import { connectToDatabase } from "./database.js";
 import userRoutes from "./routes/userRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
+import filterRoutes from "./routes/filterRoutes.js";
 import cors from "cors";
 import AppError from "./appError.js";
 import globalError from "./errorController.js";
@@ -33,6 +34,7 @@ app.use((req, res, next) => {
 //Routes
 app.use("/api/users", userRoutes);
 app.use("/api/complaint", complaintRoutes);
+app.use("/api/filter", filterRoutes);
 
 app.all("*", (req, res, next) => {
   const err = new AppError(`Can't find ${req.originalUrl} on this server.`);
