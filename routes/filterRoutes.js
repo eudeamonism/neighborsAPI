@@ -8,7 +8,8 @@ const getFirstRound = asyncHandler(async (req, res) => {
   const incoming = JSON.parse(req.params.incoming);
 
   if (Object.values(incoming)[0] === "resN") {
-    const complaints = await Complaint.find({ resolved: false }).limit(8);
+    const complaints = await Complaint.find({ resolved: false }).limit(10);
+    console.log(complaints.length);
     return res.status(200).json({
       complaintNum: complaints.length,
       complaints,
