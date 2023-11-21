@@ -76,23 +76,23 @@ const getComplaints = async (req, res) => {
   }
 
   if (req.params.filter) {
-    const skip = page * perPage;
+    const startIndex = (page - 1) * perPage;
+    const endIndex = startIndex + perPage;
 
     const fCount = await Complaint.aggregate([
       { $sort: { createdAt: -1 } },
       { $count: "totalDocuments" },
     ]);
 
-    console.log(fCount);
-    //count success; returns an array of objects, one, of total document number. need to most likely reconfigure UI to use this number for up and down buttons.
+    const totalPages = Math.ceil(fCount[0].totalDocuments / perPage);
 
-    const filtered = await Complaint.aggregate([
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: perPage },
-    ]);
+    const filtered = await Complaint.aggregate([{ $sort: { createdAt: -1 } }]);
 
-    return res.status(200).json({ complaints: filtered });
+    const paginatedComplaints = filtered.slice(startIndex, endIndex);
+
+    return res
+      .status(200)
+      .json({ complaints: paginatedComplaints, pagination: { currentPage: page, totalPages } });
   }
 
   //TO Delete ... below
