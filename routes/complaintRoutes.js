@@ -172,6 +172,7 @@ const getAllUserComplaints = asyncHandler(async (req, res) => {
 
     res.status(201).json(userComplaints);
   } catch (error) {
+    console.log("Hello!");
     throw new AppError(`Something went wrong getting`, 404);
   }
 });

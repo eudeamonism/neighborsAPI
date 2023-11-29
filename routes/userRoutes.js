@@ -108,23 +108,9 @@ const sendProfile = asyncHandler(async (req, res) => {
     const token = req.params.token;
     const refresh = req.params.refresh;
 
-    const parsedToken = jwt.verify(token, process.env.TOKEN_SECRET, function (err, res) {
-      if (err) {
-        console.log("Error in callback of jwt:  token " + err);
-      } else {
-        return res;
-      }
-    });
+    const parsedToken = jwt.verify(token, process.env.TOKEN_SECRET);
 
-    
-
-    const parsedRefresh = jwt.verify(refresh, process.env.TOKEN_SECRET, function (err, res) {
-      if (err) {
-        console.log("Error in callback of jwt: refresh " + err);
-      } else {
-        return res;
-      }
-    });
+    const parsedRefresh = jwt.verify(refresh, process.env.TOKEN_SECRET);
 
     if (parsedToken !== undefined) {
       const user = await User.findById(parsedToken.id);
